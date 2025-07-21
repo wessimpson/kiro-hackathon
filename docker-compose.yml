@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # Neo4j Knowledge Graph Database
+  neo4j:
+    image: neo4j:5.0
+    container_name: job_assistant_neo4j
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    networks:
+      - job_assistant_network
+
+  # PostgreSQL for Authentication and Application Tracking
+  postgresql:
+    image: postgres:15
+    container_name: job_assistant_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=job_assistant
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - job_assistant_network
+
+  # Redis for Caching and Session Management
+  redis:
+    image: redis:7-alpine
+    container_name: job_assistant_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - job_assistant_network
+
+  # pgAdmin for PostgreSQL Management (Optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: job_assistant_pgadmin
+    ports:
+      - "8080:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - job_assistant_network
+    depends_on:
+      - postgresql
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+
+networks:
+  job_assistant_network:
+    driver: bridge

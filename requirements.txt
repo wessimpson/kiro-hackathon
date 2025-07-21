@@ -1,0 +1,58 @@
+# AI Job Application Assistant Dependencies
+
+# CrewAI and AI Framework
+crewai==0.28.8
+crewai-tools==0.1.6
+langchain==0.1.20
+langchain-openai==0.1.8
+openai==1.30.5
+
+# Web Framework
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pydantic==2.7.4
+pydantic-settings==2.3.4
+
+# Database Dependencies
+neo4j==5.20.0
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.30
+alembic==1.13.1
+
+# Vector Database
+pinecone-client==3.2.2
+
+# Data Processing
+pandas==2.2.2
+numpy==1.26.4
+python-multipart==0.0.9
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.9
+
+# Web Scraping & Social Media
+beautifulsoup4==4.12.3
+requests==2.32.3
+selenium==4.21.0
+scrapy==2.11.2
+
+# Document Processing
+python-docx==1.1.0
+PyPDF2==3.0.1
+python-magic==0.4.27
+
+# Environment & Configuration
+python-dotenv==1.0.1
+pyyaml==6.0.1
+
+# Testing
+pytest==8.2.2
+pytest-asyncio==0.23.7
+httpx==0.27.0
+
+# Development
+black==24.4.2
+flake8==7.0.0
+mypy==1.10.0
