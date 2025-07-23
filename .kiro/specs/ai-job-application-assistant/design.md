@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AI Job Application Assistant is a repository-based system powered by CrewAI agents that optimizes job applications through intelligent data analysis and generation. The platform maintains separate user and company repositories organized as knowledge graphs, enabling CrewAI agents to understand complex relationships between skills, experiences, job requirements, and company contexts. The system uses a hybrid database approach combining knowledge graphs, vector databases, and relational storage for optimal performance.
+The AI Job Application Assistant is a repository-based system powered by CrewAI agents that optimizes job applications through AI-enhanced manual processes. Users manually input job details (including company website and application URL) while the platform automatically researches companies and generates tailored application materials. The system maintains separate user and company repositories organized as knowledge graphs, enabling CrewAI agents to understand complex relationships between skills, experiences, job requirements, and company contexts. Users maintain full control over the application process, reviewing and downloading generated materials for manual submission. The system uses a hybrid database approach combining knowledge graphs, vector databases, and relational storage for optimal performance.
 
 ## Architecture
 
@@ -20,7 +20,7 @@ graph TB
     CrewAI --> CoverAgent[Cover Letter Agent]
     CrewAI --> ATSAgent[ATS Scoring Agent]
     CrewAI --> ProjectAgent[Project Recommendation Agent]
-    CrewAI --> JobAgent[Job Discovery Agent]
+    CrewAI --> JobInputAgent[Job Input Management Agent]
     
     UserRepo --> KG[(Knowledge Graph - Neo4j)]
     CompanyRepo --> KG
@@ -28,7 +28,7 @@ graph TB
     CoverAgent --> KG
     ATSAgent --> KG
     ProjectAgent --> KG
-    JobAgent --> KG
+    JobInputAgent --> KG
     
     UserRepo --> VectorDB[(Vector Database - Pinecone)]
     CompanyRepo --> VectorDB
@@ -37,10 +37,13 @@ graph TB
     
     Auth --> PostgreSQL[(PostgreSQL)]
     API --> PostgreSQL
+    JobInputAgent --> PostgreSQL
     
-    External[External APIs & Social Media] --> UserRepo
+    External[Social Media APIs] --> UserRepo
     External --> CompanyRepo
-    External --> JobAgent
+    
+    UI --> |Manual Job Input| JobInputAgent
+    JobInputAgent --> |Trigger Company Research| CompanyRepo
 ```
 
 ### CrewAI Agent Architecture
@@ -48,12 +51,12 @@ graph TB
 The system is built around specialized CrewAI agents that collaborate to complete complex workflows:
 
 - **User Repository Agent**: Manages user data collection, parsing, and knowledge graph updates
-- **Company Repository Agent**: Handles company research, job scraping, and company knowledge graph maintenance
+- **Company Repository Agent**: Handles automated company research based on user-provided company names and websites
 - **Resume Generation Agent**: Creates tailored resumes using knowledge graph relationships
 - **Cover Letter Agent**: Generates personalized cover letters with company insights
 - **ATS Scoring Agent**: Evaluates resume compatibility and provides optimization recommendations
 - **Project Recommendation Agent**: Suggests targeted projects based on skill gap analysis
-- **Job Discovery Agent**: Monitors job boards and identifies relevant opportunities
+- **Job Input Management Agent**: Handles manual job input processing and requirement extraction
 
 ## Components and Interfaces
 
@@ -65,54 +68,126 @@ The system is built around specialized CrewAI agents that collaborate to complet
 - User knowledge graph construction and maintenance
 - Baseline improvement recommendations
 
-**Key Interfaces:**
-```typescript
-interface UserRepositoryAgent extends CrewAIAgent {
-  analyzeSocialProfile(platform: SocialPlatform, url: string): Promise<ProfileData>;
-  parseDocument(file: File, type: DocumentType): Promise<ExtractedData>;
-  buildUserKnowledgeGraph(userId: string, data: UserData): Promise<void>;
-  recommendBaselineImprovements(userId: string): Promise<Recommendation[]>;
-}
+**Key Pydantic Models:**
+```python
+class SocialPlatform(str, Enum):
+    LINKEDIN = "linkedin"
+    GITHUB = "github"
+    TWITTER = "twitter"
+    INSTAGRAM = "instagram"
 
-interface UserRepository {
-  id: string;
-  userId: string;
-  personalInfo: PersonalInfo;
-  experiences: WorkExperience[];
-  skills: SkillNode[];
-  projects: ProjectNode[];
-  socialProfiles: SocialProfileData[];
-  documents: DocumentNode[];
-  knowledgeGraph: UserKnowledgeGraph;
-}
+class DocumentType(str, Enum):
+    RESUME = "resume"
+    COVER_LETTER = "cover_letter"
+    RECOMMENDATION = "recommendation"
+    PORTFOLIO = "portfolio"
+
+class ProfileData(BaseModel):
+    platform: SocialPlatform
+    url: str = Field(..., regex=r'^https?://')
+    extracted_data: Dict[str, Any]
+    confidence_score: float = Field(..., ge=0.0, le=1.0)
+    extraction_timestamp: datetime
+    
+    class Config(BaseConfig):
+        pass
+
+class ExtractedData(BaseModel):
+    content: str = Field(..., min_length=1)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    extraction_method: str
+    confidence_score: float = Field(..., ge=0.0, le=1.0)
+    
+    class Config(BaseConfig):
+        pass
+
+class Recommendation(BaseModel):
+    id: str
+    type: str
+    title: str = Field(..., min_length=1)
+    description: str = Field(..., min_length=10)
+    priority: ImportanceLevel
+    estimated_impact: float = Field(..., ge=0.0, le=1.0)
+    implementation_effort: str
+    
+    class Config(BaseConfig):
+        pass
+
+class UserRepository(BaseModel):
+    id: str
+    user_id: str
+    personal_info: Dict[str, Any]
+    experiences: List[ExperienceNode] = Field(default_factory=list)
+    skills: List[SkillNode] = Field(default_factory=list)
+    projects: List[ProjectNode] = Field(default_factory=list)
+    social_profiles: List[ProfileData] = Field(default_factory=list)
+    documents: List[Dict[str, Any]] = Field(default_factory=list)
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config(BaseConfig):
+        pass
 ```
 
 ### Company Repository Agent
 
 **Responsibilities:**
-- Company website scraping and analysis
-- Current events and news monitoring
-- Job posting collection and analysis
-- Company knowledge graph construction
+- Automated company website research based on user-provided company names
+- Current events and news monitoring for companies
+- Company data analysis and knowledge extraction
+- Company knowledge graph construction and maintenance
 
-**Key Interfaces:**
-```typescript
-interface CompanyRepositoryAgent extends CrewAIAgent {
-  scrapeCompanyWebsite(companyUrl: string): Promise<CompanyData>;
-  monitorCompanyNews(companyName: string): Promise<NewsData[]>;
-  extractJobPosting(jobUrl: string): Promise<JobPostingData>;
-  buildCompanyKnowledgeGraph(companyId: string): Promise<void>;
-}
+**Key Pydantic Models:**
+```python
+class CompanyData(BaseModel):
+    name: str = Field(..., min_length=1)
+    website: str = Field(..., regex=r'^https?://')
+    industry: str = Field(..., min_length=1)
+    size: CompanySize
+    description: str = Field(..., min_length=10)
+    culture_keywords: List[str] = Field(default_factory=list)
+    technologies: List[str] = Field(default_factory=list)
+    scraped_at: datetime
+    
+    class Config(BaseConfig):
+        pass
 
-interface CompanyRepository {
-  id: string;
-  companyName: string;
-  websiteData: CompanyWebsiteData;
-  currentEvents: NewsEvent[];
-  jobPostings: JobPostingNode[];
-  industryInfo: IndustryData;
-  knowledgeGraph: CompanyKnowledgeGraph;
-}
+class NewsData(BaseModel):
+    title: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=10)
+    source: str = Field(..., min_length=1)
+    published_date: datetime
+    relevance_score: float = Field(..., ge=0.0, le=1.0)
+    sentiment: str = Field(..., regex=r'^(positive|negative|neutral)$')
+    
+    class Config(BaseConfig):
+        pass
+
+class JobPostingData(BaseModel):
+    title: str = Field(..., min_length=1)
+    description: str = Field(..., min_length=50)
+    requirements: List[str] = Field(..., min_items=1)
+    location: str = Field(..., min_length=1)
+    salary: Optional[SalaryRange] = None
+    posted_date: datetime
+    url: str = Field(..., regex=r'^https?://')
+    company_id: str
+    
+    class Config(BaseConfig):
+        pass
+
+class CompanyRepository(BaseModel):
+    id: str
+    company_name: str = Field(..., min_length=1)
+    website_data: CompanyData
+    current_events: List[NewsData] = Field(default_factory=list)
+    job_postings: List[JobPostingNode] = Field(default_factory=list)
+    industry_info: Dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config(BaseConfig):
+        pass
 ```
 
 ### Resume Generation Agent
@@ -184,112 +259,215 @@ interface ProjectRecommendationAgent extends CrewAIAgent {
 }
 ```
 
-### Job Discovery Agent
+### Job Input Management Agent
 
 **Responsibilities:**
-- Continuous job board monitoring
-- Job matching based on user preferences and knowledge graph
-- Application opportunity identification
-- Market trend analysis
+- Manual job input processing and validation
+- Job description parsing and requirement extraction
+- Job categorization and status management
+- Integration with company research workflow
 
 **Key Interfaces:**
 ```typescript
-interface JobDiscoveryAgent extends CrewAIAgent {
-  monitorJobBoards(userPreferences: JobPreferences): Promise<JobPosting[]>;
-  matchJobsToUser(jobs: JobPosting[], userKG: UserKnowledgeGraph): Promise<JobMatch[]>;
-  identifyApplicationOpportunities(userRepo: UserRepository): Promise<ApplicationOpportunity[]>;
+interface JobInputManagementAgent extends CrewAIAgent {
+  processJobInput(jobInput: ManualJobInput): Promise<ProcessedJobPosting>;
+  extractRequirements(jobDescription: string): Promise<JobRequirement[]>;
+  categorizeJob(jobData: JobPostingData): Promise<JobCategory>;
+  validateJobInput(jobInput: ManualJobInput): Promise<ValidationResult>;
 }
+```
+
+**Key Pydantic Models:**
+```python
+class ManualJobInput(BaseModel):
+    title: str = Field(..., min_length=1, description="Job title")
+    company_name: str = Field(..., min_length=1, description="Company name")
+    company_website: Optional[str] = Field(None, regex=r'^https?://', description="Company website URL")
+    job_description: str = Field(..., min_length=50, description="Full job description")
+    location: str = Field(..., min_length=1, description="Job location")
+    salary_min: Optional[int] = Field(None, ge=0, description="Minimum salary")
+    salary_max: Optional[int] = Field(None, ge=0, description="Maximum salary")
+    application_url: Optional[str] = Field(None, regex=r'^https?://', description="Application URL")
+    job_type: str = Field(default="full_time", description="Job type")
+    remote_allowed: bool = Field(default=False, description="Remote work allowed")
+    user_notes: Optional[str] = Field(None, description="User's personal notes")
+    status: JobStatus = Field(default=JobStatus.INTERESTED, description="Application status")
+    
+    class Config(BaseConfig):
+        pass
+
+class JobStatus(str, Enum):
+    INTERESTED = "interested"
+    APPLIED = "applied"
+    INTERVIEWING = "interviewing"
+    REJECTED = "rejected"
+    OFFER = "offer"
+    WITHDRAWN = "withdrawn"
+
+class ProcessedJobPosting(BaseModel):
+    id: str = Field(..., description="Generated job posting ID")
+    original_input: ManualJobInput
+    extracted_requirements: List[JobRequirement] = Field(default_factory=list)
+    skill_keywords: List[str] = Field(default_factory=list)
+    experience_level: str = Field(..., description="Required experience level")
+    company_id: Optional[str] = Field(None, description="Associated company ID if found")
+    processing_timestamp: datetime = Field(default_factory=datetime.now)
+    
+    class Config(BaseConfig):
+        pass
 ```
 
 ## Data Models
 
-### Knowledge Graph Node Types
+### Pydantic Base Models for Type Safety
 
-```typescript
-// User Repository Knowledge Graph Nodes
-interface UserNode {
-  id: string;
-  type: 'USER';
-  properties: {
-    userId: string;
-    name: string;
-    email: string;
-    location: string;
-  };
-}
+All data exchange between CrewAI agents uses strictly-typed Pydantic models to ensure data integrity and early error detection:
 
-interface SkillNode {
-  id: string;
-  type: 'SKILL';
-  properties: {
-    name: string;
-    category: SkillCategory;
-    proficiency: ProficiencyLevel;
-    yearsOfExperience?: number;
-  };
-}
+```python
+from pydantic import BaseModel, Field, validator
+from typing import Optional, List, Dict, Union
+from datetime import datetime
+from enum import Enum
 
-interface ExperienceNode {
-  id: string;
-  type: 'EXPERIENCE';
-  properties: {
-    company: string;
-    position: string;
-    startDate: Date;
-    endDate?: Date;
-    description: string;
-    achievements: string[];
-  };
-}
+# Base configuration for all Pydantic models
+class BaseConfig:
+    use_enum_values = True
+    validate_assignment = True
+    arbitrary_types_allowed = True
 
-interface ProjectNode {
-  id: string;
-  type: 'PROJECT';
-  properties: {
-    name: string;
-    description: string;
-    technologies: string[];
-    url?: string;
-    completionDate: Date;
-  };
-}
+# Enums for type safety
+class SkillCategory(str, Enum):
+    TECHNICAL = "technical"
+    SOFT = "soft"
+    LANGUAGE = "language"
+    CERTIFICATION = "certification"
 
-// Company Repository Knowledge Graph Nodes
-interface CompanyNode {
-  id: string;
-  type: 'COMPANY';
-  properties: {
-    name: string;
-    industry: string;
-    size: CompanySize;
-    website: string;
-    description: string;
-  };
-}
+class ProficiencyLevel(str, Enum):
+    BEGINNER = "beginner"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
+    EXPERT = "expert"
 
-interface JobPostingNode {
-  id: string;
-  type: 'JOB_POSTING';
-  properties: {
-    title: string;
-    description: string;
-    location: string;
-    salary?: SalaryRange;
-    postedDate: Date;
-    url: string;
-  };
-}
+class CompanySize(str, Enum):
+    STARTUP = "startup"
+    SMALL = "small"
+    MEDIUM = "medium"
+    LARGE = "large"
+    ENTERPRISE = "enterprise"
 
-interface RequirementNode {
-  id: string;
-  type: 'REQUIREMENT';
-  properties: {
-    skill: string;
-    importance: ImportanceLevel;
-    yearsRequired?: number;
-    type: RequirementType;
-  };
-}
+class ImportanceLevel(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+# User Repository Pydantic Models
+class UserNode(BaseModel):
+    id: str = Field(..., description="Unique identifier for the user node")
+    type: str = Field(default="USER", description="Node type identifier")
+    user_id: str = Field(..., description="User's unique identifier")
+    name: str = Field(..., min_length=1, description="User's full name")
+    email: str = Field(..., regex=r'^[^@]+@[^@]+\.[^@]+$', description="User's email address")
+    location: Optional[str] = Field(None, description="User's location")
+    
+    class Config(BaseConfig):
+        pass
+
+class SkillNode(BaseModel):
+    id: str = Field(..., description="Unique identifier for the skill node")
+    type: str = Field(default="SKILL", description="Node type identifier")
+    name: str = Field(..., min_length=1, description="Skill name")
+    category: SkillCategory = Field(..., description="Skill category")
+    proficiency: ProficiencyLevel = Field(..., description="Proficiency level")
+    years_of_experience: Optional[int] = Field(None, ge=0, description="Years of experience with this skill")
+    
+    @validator('years_of_experience')
+    def validate_experience(cls, v):
+        if v is not None and v > 50:
+            raise ValueError('Years of experience cannot exceed 50')
+        return v
+    
+    class Config(BaseConfig):
+        pass
+
+class ExperienceNode(BaseModel):
+    id: str = Field(..., description="Unique identifier for the experience node")
+    type: str = Field(default="EXPERIENCE", description="Node type identifier")
+    company: str = Field(..., min_length=1, description="Company name")
+    position: str = Field(..., min_length=1, description="Job position/title")
+    start_date: datetime = Field(..., description="Start date of employment")
+    end_date: Optional[datetime] = Field(None, description="End date of employment")
+    description: str = Field(..., min_length=10, description="Job description")
+    achievements: List[str] = Field(default_factory=list, description="List of achievements")
+    
+    @validator('end_date')
+    def validate_end_date(cls, v, values):
+        if v and 'start_date' in values and v < values['start_date']:
+            raise ValueError('End date cannot be before start date')
+        return v
+    
+    class Config(BaseConfig):
+        pass
+
+class ProjectNode(BaseModel):
+    id: str = Field(..., description="Unique identifier for the project node")
+    type: str = Field(default="PROJECT", description="Node type identifier")
+    name: str = Field(..., min_length=1, description="Project name")
+    description: str = Field(..., min_length=10, description="Project description")
+    technologies: List[str] = Field(..., min_items=1, description="Technologies used in the project")
+    url: Optional[str] = Field(None, regex=r'^https?://', description="Project URL")
+    completion_date: datetime = Field(..., description="Project completion date")
+    
+    class Config(BaseConfig):
+        pass
+
+# Company Repository Pydantic Models
+class SalaryRange(BaseModel):
+    min_salary: Optional[int] = Field(None, ge=0, description="Minimum salary")
+    max_salary: Optional[int] = Field(None, ge=0, description="Maximum salary")
+    currency: str = Field(default="USD", description="Currency code")
+    
+    @validator('max_salary')
+    def validate_salary_range(cls, v, values):
+        if v and 'min_salary' in values and values['min_salary'] and v < values['min_salary']:
+            raise ValueError('Maximum salary cannot be less than minimum salary')
+        return v
+
+class CompanyNode(BaseModel):
+    id: str = Field(..., description="Unique identifier for the company node")
+    type: str = Field(default="COMPANY", description="Node type identifier")
+    name: str = Field(..., min_length=1, description="Company name")
+    industry: str = Field(..., min_length=1, description="Company industry")
+    size: CompanySize = Field(..., description="Company size category")
+    website: str = Field(..., regex=r'^https?://', description="Company website URL")
+    description: str = Field(..., min_length=10, description="Company description")
+    
+    class Config(BaseConfig):
+        pass
+
+class JobPostingNode(BaseModel):
+    id: str = Field(..., description="Unique identifier for the job posting node")
+    type: str = Field(default="JOB_POSTING", description="Node type identifier")
+    title: str = Field(..., min_length=1, description="Job title")
+    description: str = Field(..., min_length=50, description="Job description")
+    location: str = Field(..., min_length=1, description="Job location")
+    salary: Optional[SalaryRange] = Field(None, description="Salary range")
+    posted_date: datetime = Field(..., description="Date when job was posted")
+    url: str = Field(..., regex=r'^https?://', description="Job posting URL")
+    
+    class Config(BaseConfig):
+        pass
+
+class RequirementNode(BaseModel):
+    id: str = Field(..., description="Unique identifier for the requirement node")
+    type: str = Field(default="REQUIREMENT", description="Node type identifier")
+    skill: str = Field(..., min_length=1, description="Required skill")
+    importance: ImportanceLevel = Field(..., description="Importance level of the requirement")
+    years_required: Optional[int] = Field(None, ge=0, le=20, description="Years of experience required")
+    requirement_type: str = Field(..., description="Type of requirement (hard/soft skill, certification, etc.)")
+    
+    class Config(BaseConfig):
+        pass
 ```
 
 ### Knowledge Graph Relationships

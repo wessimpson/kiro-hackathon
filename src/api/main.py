@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 import logging
 from src.config.settings import settings
 from src.database.neo4j_client import neo4j_client
+from src.services.job_monitoring_service import job_monitoring_service
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -23,14 +24,19 @@ async def lifespan(app: FastAPI):
         neo4j_client.connect()
         neo4j_client.setup_indexes()
         logger.info("Database connections established")
+        
+        # Start job monitoring service
+        await job_monitoring_service.start_monitoring()
+        logger.info("Job monitoring service started")
     except Exception as e:
-        logger.error(f"Failed to initialize databases: {e}")
+        logger.error(f"Failed to initialize services: {e}")
         raise
     
     yield
     
     # Shutdown
     logger.info("Shutting down AI Job Application Assistant")
+    await job_monitoring_service.stop_monitoring()
     neo4j_client.close()
 
 
@@ -50,6 +56,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routes
+from .routes.notifications import router as notifications_router
+from .routes.jobs import router as jobs_router
+
+app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
+app.include_router(jobs_router, prefix="/api/v1/jobs", tags=["jobs"])
 
 
 @app.get("/")

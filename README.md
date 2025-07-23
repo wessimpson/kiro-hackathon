@@ -9,7 +9,23 @@ An intelligent platform that automates and optimizes job applications using Crew
 - **AI-Generated Applications**: Creates tailored resumes and cover letters using knowledge graph relationships
 - **ATS Optimization**: Scores and optimizes applications for Applicant Tracking Systems
 - **Project Recommendations**: Suggests targeted projects to fill skill gaps
-- **Autonomous Job Discovery**: Monitors job boards and automatically generates applications
+- **🤖 Autonomous Job Discovery & Application**: Continuously monitors job boards, finds relevant opportunities, and handles the complete application process with minimal human intervention
+
+### 🎯 Auto-Application Workflow
+
+The platform provides a seamless, AI-driven job application experience:
+
+1. **Continuous Monitoring**: AI agents scan multiple job boards (LinkedIn, Indeed, Glassdoor, etc.) every 5 minutes
+2. **Smart Matching**: Jobs are scored based on your skills, experience, location, and salary preferences
+3. **Instant Notifications**: Get notified about high-match opportunities with a simple "Apply" or "Skip" decision
+4. **AI Application Generation**: Upon approval, AI generates tailored resume and cover letter in minutes
+5. **Review & Refine**: Review generated materials, make refinements, and approve for submission
+6. **Automated Submission**: AI submits applications directly to job boards or company systems
+7. **Progress Tracking**: Monitor application status and receive updates automatically
+
+```
+🔍 Job Discovery → 📱 User Notification → ✅ User Approval → 🤖 AI Generation → 👀 User Review → 🚀 Auto Submit
+```
 
 ## 🏗️ Architecture
 

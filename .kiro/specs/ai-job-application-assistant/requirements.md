@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The AI Job Application Assistant is a platform that helps job seekers create optimized job applications through intelligent automation. Users create accounts, build comprehensive data repositories from social media profiles and documents, then receive AI-generated resumes and cover letters tailored to specific job postings. The platform includes ATS scoring, refinement tools, and project recommendations to maximize interview chances.
+The AI Job Application Assistant is a platform that helps job seekers create optimized job applications through AI-enhanced manual processes. Users create accounts, build comprehensive data repositories from social media profiles and documents, then manually input job details to receive AI-generated resumes and cover letters tailored to specific job postings. The platform includes company research automation, ATS scoring, refinement tools, and project recommendations to maximize interview chances while maintaining full user control over the application process.
 
 ## Requirements
 
@@ -19,36 +19,37 @@ The AI Job Application Assistant is a platform that helps job seekers create opt
 
 ### Requirement 2
 
-**User Story:** As a system, I want to maintain comprehensive company repositories with job postings and company information, so that CrewAI agents can access rich contextual data for application optimization.
+**User Story:** As a job seeker, I want to manually input job details and have the system automatically research the company, so that CrewAI agents can access rich contextual data for application optimization without violating any terms of service.
 
 #### Acceptance Criteria
 
-1. WHEN a job posting URL is provided THEN CrewAI agents SHALL create or update a company repository containing company information from their website and current events from news platforms
-2. WHEN company data is collected THEN the system SHALL store job postings as entities belonging to the company entity, including job descriptions, required skills, and technologies
-3. WHEN company repositories are populated THEN the system SHALL organize this data using knowledge graph structures to establish relationships between companies, jobs, skills, and requirements
-4. WHEN new job postings are discovered THEN the system SHALL automatically update the relevant company repository and establish connections in the knowledge graph
+1. WHEN a user manually inputs job details (job title, description, company name, company website, location, salary, application URL) THEN the system SHALL create a job posting entity in the knowledge graph
+2. WHEN a company name and website are provided THEN CrewAI agents SHALL automatically research the company website and current events from news platforms to build a comprehensive company repository
+3. WHEN company data is collected THEN the system SHALL store this information using knowledge graph structures to establish relationships between companies, jobs, skills, and requirements
+4. WHEN job details are saved THEN the system SHALL parse job requirements and establish connections to relevant skills in the knowledge graph
+5. WHEN a user provides an application URL THEN the system SHALL store this for the user to manually apply after reviewing generated materials
 
 ### Requirement 3
 
-**User Story:** As a job seeker, I want to apply for a specific job by providing the job posting URL and receive an optimized resume and cover letter, so that I can maximize my ATS score and application success.
+**User Story:** As a job seeker, I want to generate an optimized resume and cover letter for a manually entered job posting, so that I can maximize my ATS score and application success.
 
 #### Acceptance Criteria
 
-1. WHEN a user provides a job posting URL THEN CrewAI agents SHALL analyze the job using data from both user and company repositories
+1. WHEN a user selects a manually entered job posting THEN CrewAI agents SHALL analyze the job using data from both user and company repositories
 2. WHEN analysis is complete THEN CrewAI agents SHALL generate a customized resume leveraging knowledge graph relationships between user skills and job requirements
 3. WHEN the resume is generated THEN the system SHALL calculate and display the ATS compatibility score using the job's specific requirements
 4. WHEN company research is available THEN CrewAI agents SHALL generate a personalized cover letter using user repository data, company repository information, and current events
 
 ### Requirement 4
 
-**User Story:** As a job seeker, I want to review and refine my generated resume and cover letter before submitting, so that I can ensure the application meets my standards and preferences.
+**User Story:** As a job seeker, I want to review and refine my generated resume and cover letter, so that I can ensure the application meets my standards and preferences before manually submitting it myself.
 
 #### Acceptance Criteria
 
 1. WHEN resume and cover letter are generated THEN the system SHALL present both documents to the user for review
 2. WHEN a user wants to refine the application THEN the system SHALL provide a "refine mode" allowing users to highlight specific sections
 3. WHEN a user highlights text and provides prompts THEN an LLM SHALL update and modify the specific parts of the resume or cover letter
-4. WHEN the user is satisfied with the application THEN they SHALL be able to submit the job application or save it for later
+4. WHEN the user is satisfied with the application THEN they SHALL be able to download the documents in various formats (PDF, DOCX) for manual submission
 
 ### Requirement 5
 
@@ -63,15 +64,15 @@ The AI Job Application Assistant is a platform that helps job seekers create opt
 
 ### Requirement 6
 
-**User Story:** As a job seeker, I want the system to autonomously find and apply to relevant jobs, so that I can maximize my opportunities without constant manual effort.
+**User Story:** As a job seeker, I want an intuitive interface to manually input job details, so that I can easily add job opportunities I find interesting without relying on automated scraping.
 
 #### Acceptance Criteria
 
-1. WHEN a user sets job search preferences THEN CrewAI agents SHALL continuously monitor job boards and company websites for matching positions
-2. WHEN relevant jobs are found THEN CrewAI agents SHALL analyze job fit using knowledge graph data and generate application materials
-3. WHEN applications are ready THEN the system SHALL present them to the user for approval before submission
-4. IF user approves an application THEN the system SHALL automatically submit the application through appropriate channels
-5. WHEN applications are submitted THEN the system SHALL track application status and provide updates to the user
+1. WHEN a user wants to add a new job opportunity THEN the system SHALL provide a form to input job title, company name, job description, location, salary range, and application URL
+2. WHEN a user inputs company information THEN the system SHALL validate the company website URL and provide suggestions for similar companies already in the system
+3. WHEN job details are entered THEN the system SHALL automatically parse and extract key requirements, skills, and qualifications from the job description text
+4. WHEN a job is saved THEN the system SHALL allow users to categorize jobs by status (interested, applied, interviewing, rejected, offer) and add personal notes
+5. WHEN viewing saved jobs THEN the system SHALL display jobs in an organized list with filtering and search capabilities
 
 ### Requirement 7
 
@@ -94,3 +95,15 @@ The AI Job Application Assistant is a platform that helps job seekers create opt
 2. WHEN data is accessed for processing THEN the system SHALL use secure authentication and authorization
 3. WHEN users want to modify their data THEN the system SHALL provide granular control over information sharing
 4. IF users want to delete their account THEN the system SHALL completely remove all personal data from the system
+
+### Requirement 9
+
+**User Story:** As a system architect, I want strictly-typed data models for all agent communications, so that data integrity is maintained and errors are caught early in the development process.
+
+#### Acceptance Criteria
+
+1. WHEN CrewAI agents exchange data THEN the system SHALL use Pydantic models to validate all data structures
+2. WHEN data is passed between agents THEN the system SHALL enforce type checking and validation at runtime
+3. WHEN invalid data is detected THEN the system SHALL raise clear validation errors with specific field information
+4. WHEN data models are updated THEN the system SHALL maintain backward compatibility through versioned schemas
+5. WHEN API responses are generated THEN the system SHALL serialize Pydantic models to ensure consistent data formats
