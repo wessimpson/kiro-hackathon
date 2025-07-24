@@ -29,7 +29,7 @@ class CompanyRepositoryAgent:
     async def monitor_company_news(self, company_name: str) -> List[Dict]:
         """Monitor company news and current events"""
         # Implementation will be added in later tasks
-        pass
+        pass    
     
     async def extract_job_posting(self, job_url: str) -> Dict:
         """Extract and parse job posting information"""

@@ -42,6 +42,11 @@ clean:  ## Clean up temporary files
 	rm -rf .coverage htmlcov/
 
 setup:  ## Complete setup (install + docker + test)
+	@if [ ! -f .env ]; then \
+		echo "Creating .env file from .env.example..."; \
+		cp .env.example .env; \
+		echo "Please edit .env file with your configuration"; \
+	fi
 	make install
 	make docker-up
 	sleep 10
